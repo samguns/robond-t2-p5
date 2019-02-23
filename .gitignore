@@ -8,7 +8,8 @@
 *.lo
 *.o
 *.obj
-
+*/devel
+*/build
 # Precompiled Headers
 *.gch
 *.pch
