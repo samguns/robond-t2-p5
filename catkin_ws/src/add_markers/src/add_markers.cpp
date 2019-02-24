@@ -1,21 +1,39 @@
 #include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
+#include <nav_msgs/Odometry.h>
+
+// Set our action
+static uint32_t action = visualization_msgs::Marker::ADD;
+// Set our target goal
+static float x = 4.0;
+static float y = 2.0;
+
+static int counter = 0;
+
+static bool pause_action(false);
+
+static void odom_callback(const nav_msgs::Odometry::ConstPtr& msg) {
+  if (action == visualization_msgs::Marker::ADD) {
+    if ((fabs(msg->pose.pose.position.x - x) <= 0.2) &&
+        (fabs(msg->pose.pose.position.y - y) <= 0.2)) {
+      pause_action = true;
+      action = visualization_msgs::Marker::DELETEALL;
+    }
+  }
+}
 
 int main( int argc, char** argv )
 {
   ros::init(argc, argv, "add_markers");
   ros::NodeHandle n;
-  ros::Duration r(5.0);
   ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 1);
+
+  ros::Subscriber sub = n.subscribe("odom", 1000, odom_callback);
 
   // Set our shape type to be a cube
   uint32_t shape = visualization_msgs::Marker::CUBE;
 
-  // Set our action
-  uint32_t action = visualization_msgs::Marker::ADD;
-
-  // Set our target goal
-  float x = 1.0;
+  ros::Duration(6.0).sleep();
 
   while (ros::ok()) {
     visualization_msgs::Marker marker;
@@ -36,7 +54,7 @@ int main( int argc, char** argv )
 
     // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
     marker.pose.position.x = x;
-    marker.pose.position.y = 0;
+    marker.pose.position.y = y;
     marker.pose.position.z = 0;
     marker.pose.orientation.x = 0.0;
     marker.pose.orientation.y = 0.0;
@@ -44,14 +62,14 @@ int main( int argc, char** argv )
     marker.pose.orientation.w = 1.0;
 
     // Set the scale of the marker -- 1x1x1 here means 1m on a side
-    marker.scale.x = 1.0;
-    marker.scale.y = 1.0;
-    marker.scale.z = 1.0;
+    marker.scale.x = 0.3;
+    marker.scale.y = 0.3;
+    marker.scale.z = 0.3;
 
     // Set the color -- be sure to set alpha to something non-zero!
     marker.color.r = 0.0f;
-    marker.color.g = 1.0f;
-    marker.color.b = 0.0f;
+    marker.color.g = 0.0f;
+    marker.color.b = 1.0f;
     marker.color.a = 1.0;
 
     marker.lifetime = ros::Duration();
@@ -60,23 +78,25 @@ int main( int argc, char** argv )
     marker_pub.publish(marker);
     ROS_INFO("Publish action %d  to %f", action, x);
 
-    switch (action) {
-      case visualization_msgs::Marker::ADD:
-        action = visualization_msgs::Marker::DELETEALL;
-        break;
+    ros::spinOnce();
 
-      case visualization_msgs::Marker::DELETEALL:
+    if (pause_action) {
+      counter++;
+
+      if (counter == 5) {
+        pause_action = false;
         action = visualization_msgs::Marker::ADD;
-        if (x == 1.0) {
-          x = -1.0;
-        } else {
-          x = 1.0;
-        }
-        break;
 
-      default:break;
+        if (x == 4.0 && y == 2.0) {
+          x = 1.0;
+          y = 0.0;
+        } else {
+          x = 4.0;
+          y = 2.0;
+        }
+      }
     }
 
-    r.sleep();
+    ros::Duration(1.0).sleep();
   }
 }
