@@ -2,6 +2,14 @@
 #include <visualization_msgs/Marker.h>
 #include <nav_msgs/Odometry.h>
 
+enum states_e {
+  picking_up = 0,
+  picked,
+  returning,
+  drop_off,
+  max_state
+};
+
 // Set our action
 static uint32_t action = visualization_msgs::Marker::ADD;
 // Set our target goal
@@ -10,15 +18,34 @@ static float y = 2.0;
 
 static int counter = 0;
 
-static bool pause_action(false);
+static states_e state = picking_up;
 
 static void odom_callback(const nav_msgs::Odometry::ConstPtr& msg) {
-  if (action == visualization_msgs::Marker::ADD) {
-    if ((fabs(msg->pose.pose.position.x - x) <= 0.2) &&
-        (fabs(msg->pose.pose.position.y - y) <= 0.2)) {
-      pause_action = true;
-      action = visualization_msgs::Marker::DELETEALL;
-    }
+  bool reached_goal(false);
+
+  if ((fabs(msg->pose.pose.position.x - x) <= 0.2) &&
+      (fabs(msg->pose.pose.position.y - y) <= 0.2)) {
+    reached_goal = true;
+  }
+
+  switch (state) {
+    case picking_up:
+      if (reached_goal) {
+        state = picked;
+        action = visualization_msgs::Marker::DELETEALL;
+      }
+
+      break;
+
+    case returning:
+      if (reached_goal) {
+        state = drop_off;
+        action = visualization_msgs::Marker::ADD;
+      }
+
+      break;
+
+    default:break;
   }
 }
 
@@ -76,24 +103,18 @@ int main( int argc, char** argv )
 
     // Publish the marker
     marker_pub.publish(marker);
-    ROS_INFO("Publish action %d  to %f", action, x);
+    ROS_INFO("Publish action %d to x:%f y:%f", action, x, y);
 
     ros::spinOnce();
 
-    if (pause_action) {
+    if (state == picked) {
       counter++;
 
       if (counter == 5) {
-        pause_action = false;
-        action = visualization_msgs::Marker::ADD;
-
-        if (x == 4.0 && y == 2.0) {
-          x = 1.0;
-          y = 0.0;
-        } else {
-          x = 4.0;
-          y = 2.0;
-        }
+        state = returning;
+        counter = 0;
+        x = 1.0;
+        y = 0.0;
       }
     }
 

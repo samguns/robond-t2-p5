@@ -1,9 +1,11 @@
-// git clone https://github.com/ros-perception/slam_gmapping.git
-
-// git clone https://github.com/turtlebot/turtlebot.git
-
-// git clone https://github.com/turtlebot/turtlebot_interactions.git
-
-// git clone https://github.com/turtlebot/turtlebot_simulator.git
-
 rosdep install --from-paths catkin_ws/src --ignore-src -r -y
+
+cd catkin_ws
+
+catkin_make
+
+source devel/setup.bash
+
+cd src/ShellScripts/
+
+./home_service.sh
